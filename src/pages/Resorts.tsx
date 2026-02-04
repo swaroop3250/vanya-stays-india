@@ -1,9 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ResortCard from '@/components/ResortCard';
-import { resorts } from '@/data/mockData';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -30,9 +29,19 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { api } from '@/services/api';
+import type { Resort } from '@/types';
 
 const amenitiesList = ['Pool', 'Spa', 'Restaurant', 'WiFi', 'Gym', 'Beach Access', 'Mountain View', 'Pet Friendly'];
 const propertyTypes = ['Beach Resort', 'Heritage', 'Villa', 'Boutique', 'Mountain Retreat'];
+// Map UI labels to Resort.propertyType values
+const propertyTypeToSlug: Record<string, string> = {
+  'Beach Resort': 'beach-resort',
+  'Heritage': 'heritage',
+  'Villa': 'villa',
+  'Boutique': 'boutique',
+  'Mountain Retreat': 'mountain-retreat',
+};
 
 const Resorts = () => {
   const [searchParams] = useSearchParams();
@@ -44,6 +53,29 @@ const Resorts = () => {
   const [minRating, setMinRating] = useState<number | null>(null);
   const [sortBy, setSortBy] = useState('recommended');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [resorts, setResorts] = useState<Resort[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadResorts = async () => {
+      try {
+        const response = await api.hotels.list();
+        if (isMounted) {
+          setResorts(response);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadResorts();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -91,6 +123,13 @@ const Resorts = () => {
     if (selectedAmenities.length > 0 && !selectedAmenities.some(a => resort.amenities.includes(a))) {
       return false;
     }
+    if (selectedPropertyTypes.length > 0) {
+      const resortSlug = resort.propertyType;
+      const selectedSlugs = selectedPropertyTypes.map(t => propertyTypeToSlug[t]).filter(Boolean);
+      if (selectedSlugs.length > 0 && !selectedSlugs.includes(resortSlug)) {
+        return false;
+      }
+    }
     return true;
   });
 
@@ -130,7 +169,7 @@ const Resorts = () => {
       {/* Rating */}
       <div>
         <h4 className="font-semibold mb-4">Minimum Rating</h4>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {[3, 3.5, 4, 4.5].map((rating) => (
             <Button
               key={rating}
@@ -323,7 +362,9 @@ const Resorts = () => {
             )}
 
             {/* Results Grid */}
-            {filteredResorts.length > 0 ? (
+            {isLoading ? (
+              <div className="text-center py-20 text-muted-foreground">Loading resorts...</div>
+            ) : filteredResorts.length > 0 ? (
               <div className={cn(
                 'grid gap-6',
                 viewMode === 'grid'

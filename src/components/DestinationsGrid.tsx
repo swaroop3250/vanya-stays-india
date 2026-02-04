@@ -1,7 +1,12 @@
 import { Link } from 'react-router-dom';
-import { destinations } from '@/data/mockData';
+import type { Destination } from '@/types';
 
-const DestinationsGrid = () => {
+interface DestinationsGridProps {
+  destinations: Destination[];
+  isLoading?: boolean;
+}
+
+const DestinationsGrid = ({ destinations, isLoading = false }: DestinationsGridProps) => {
   return (
     <section className="py-20 bg-background">
       <div className="container mx-auto px-4 lg:px-8">
@@ -17,7 +22,12 @@ const DestinationsGrid = () => {
 
         {/* Bento Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 lg:gap-6 auto-rows-[200px] lg:auto-rows-[240px]">
-          {destinations.slice(0, 8).map((destination, index) => {
+          {isLoading && (
+            <div className="col-span-full text-center text-muted-foreground">
+              Loading destinations...
+            </div>
+          )}
+          {!isLoading && destinations.slice(0, 8).map((destination, index) => {
             // Determine grid span based on index for visual interest
             const isLarge = index === 0 || index === 3;
             const isTall = index === 1 || index === 6;
@@ -34,6 +44,9 @@ const DestinationsGrid = () => {
                 <img
                   src={destination.image}
                   alt={destination.name}
+                  onError={(event) => {
+                    event.currentTarget.src = "/images/destinations/munnar.svg";
+                  }}
                   className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                 />
                 

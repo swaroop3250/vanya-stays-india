@@ -1,13 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { resorts, reviews, amenityIcons } from '@/data/mockData';
+import { amenityIcons } from '@/data/mockData';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format, differenceInDays } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { api } from '@/services/api';
+import type { Resort, Review } from '@/types';
 import {
   Star,
   MapPin,
@@ -25,15 +27,51 @@ import {
 
 const ResortDetail = () => {
   const { id } = useParams();
-  const resort = resorts.find(r => r.id === id);
-  
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [checkIn, setCheckIn] = useState<Date>();
   const [checkOut, setCheckOut] = useState<Date>();
   const [guests, setGuests] = useState(2);
   const [rooms, setRooms] = useState(1);
-  const [selectedRoom, setSelectedRoom] = useState(resort?.roomTypes[0]);
+  const [selectedRoom, setSelectedRoom] = useState<Resort['roomTypes'][number] | undefined>(undefined);
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const [resort, setResort] = useState<Resort | null>(null);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadResort = async () => {
+      if (!id) return;
+      try {
+        const [resortResponse, reviewsResponse] = await Promise.all([
+          api.hotels.getById(id),
+          api.hotels.reviews(id),
+        ]);
+        if (isMounted) {
+          setResort(resortResponse);
+          setSelectedRoom(resortResponse.roomTypes[0]);
+          setReviews(reviewsResponse);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadResort();
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-muted-foreground">
+        Loading resort details...
+      </div>
+    );
+  }
 
   if (!resort) {
     return (
@@ -57,7 +95,10 @@ const ResortDetail = () => {
   };
 
   const nights = checkIn && checkOut ? differenceInDays(checkOut, checkIn) : 1;
-  const subtotal = (selectedRoom?.price || resort.pricePerNight) * nights * rooms;
+  const maxGuestsPerRoom = selectedRoom?.maxGuests || 2;
+  const requiredRooms = Math.ceil(guests / maxGuestsPerRoom);
+  const effectiveRooms = Math.max(rooms, requiredRooms);
+  const subtotal = (selectedRoom?.price || resort.pricePerNight) * nights * effectiveRooms;
   const gst = subtotal * 0.18;
   const total = subtotal + gst;
 
@@ -78,6 +119,9 @@ const ResortDetail = () => {
         <img
           src={resort.images[currentImageIndex]}
           alt={resort.name}
+          onError={(event) => {
+            event.currentTarget.src = "/images/hotels/boutique.svg";
+          }}
           className="w-full h-full object-cover"
         />
         
@@ -198,6 +242,9 @@ const ResortDetail = () => {
                     <img
                       src={room.image}
                       alt={room.name}
+                      onError={(event) => {
+                        event.currentTarget.src = "/images/rooms/room.svg";
+                      }}
                       className="w-full md:w-40 h-32 object-cover rounded-xl"
                     />
                     <div className="flex-1">
@@ -350,7 +397,7 @@ const ResortDetail = () => {
               <div className="space-y-3 mb-6 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">
-                    {formatPrice(selectedRoom?.price || resort.pricePerNight)} × {nights} night{nights > 1 ? 's' : ''} × {rooms} room
+                    {formatPrice(selectedRoom?.price || resort.pricePerNight)} × {nights} night{nights > 1 ? 's' : ''} × {effectiveRooms} room{effectiveRooms > 1 ? 's' : ''} · {guests} guest{guests > 1 ? 's' : ''}
                   </span>
                   <span>{formatPrice(subtotal)}</span>
                 </div>
