@@ -1,10 +1,15 @@
-import { resorts } from '@/data/mockData';
 import ResortCard from './ResortCard';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import type { Resort } from '@/types';
 
-const TrendingStays = () => {
+interface TrendingStaysProps {
+  resorts: Resort[];
+  isLoading?: boolean;
+}
+
+const TrendingStays = ({ resorts, isLoading = false }: TrendingStaysProps) => {
   const trendingResorts = resorts.slice(0, 4);
 
   return (
@@ -30,7 +35,12 @@ const TrendingStays = () => {
 
         {/* Resort Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {trendingResorts.map((resort, index) => (
+          {isLoading && (
+            <div className="col-span-full text-center text-muted-foreground">
+              Loading stays...
+            </div>
+          )}
+          {!isLoading && trendingResorts.map((resort, index) => (
             <div
               key={resort.id}
               className="animate-fade-in"

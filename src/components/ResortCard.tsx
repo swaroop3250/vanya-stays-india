@@ -39,6 +39,9 @@ const ResortCard = ({ resort, featured = false }: ResortCardProps) => {
           <img
             src={resort.images[currentImageIndex]}
             alt={resort.name}
+            onError={(event) => {
+              event.currentTarget.src = "/images/hotels/boutique.svg";
+            }}
             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
           />
           
