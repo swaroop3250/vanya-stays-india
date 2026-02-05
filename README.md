@@ -56,6 +56,23 @@ Required keys:
 - `CORS_ORIGIN`
 - `PUBLIC_BASE_URL`
 
+## Deploy (Render Blueprint)
+
+This repo includes `render.yaml` for one-click deployment on Render.
+
+Steps:
+1. Push your latest changes to GitHub.
+2. In Render, select **New → Blueprint** and choose this repo.
+3. Set the required secrets when prompted:
+   - `JWT_ACCESS_SECRET`
+   - `JWT_REFRESH_SECRET`
+   - `PUBLIC_BASE_URL` (set to your Render service URL)
+
+Render will:
+- build the frontend and backend
+- run `npm run start`
+- serve the frontend from the Express server
+
 ## Tech Stack
 
 - Vite
